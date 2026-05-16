@@ -19,7 +19,7 @@ A simple auto totem mod for Minecraft.
 Drop the `.jar` into your `.minecraft/mods` folder.
 
 ## Disclaimer
-- ** I AM NOT RESPONSIBLE IF YOU GET BANNED FROM A SERVER
+- **I AM NOT RESPONSIBLE IF YOU GET BANNED FROM A SERVER**
 ### Some unsafe servers (for now) are:
 - **pvplegacy**
 - **flowpvp**
