@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "auto-totem",
+	"version": "${version}",
+	"name": "Auto Totem",
+	"description": "A simple auto totem mod",
+	"authors": [
+		"Kanax01"
+	],
+	"contact": {
+		"homepage": "https://kanax01.github.io",
+		"sources": "https://github.com/Kanax01/Auto-Totem"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/auto-totem/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"main": [
+          "auto.totem.AutoTotemMain"
+		],
+		"client": [
+			"auto.totem.AutoTotemClient"
+		],
+		"modmenu": [
+			"auto.totem.Menu"
+		]
+	},
+	"mixins": [
+		"auto-totem.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.2",
+		"minecraft": "~26.1.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	},
+	"recommends": {
+		"cloth-config": ">=26.1.154",
+		"modmenu": ">=18.0.0"
+	}
+}
