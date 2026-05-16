@@ -30,12 +30,9 @@ Drop the `.jar` into your `.minecraft/mods` folder.
 - **Legit** — Swaps to a hotbar totem when health is low and replenishes both hands
 
 ## Utils
-- **Damage Predict** — Equips a totem in dangerous situations
+- **Damage Predict** — Equips a totem in dangerous situations if totem not on and in legit mode it double hands
 - **Gapple Bind** — Swaps your offhand with a gapple when holding a selected item and uses it
 - **Gapple Bind Main** — Swaps the selected item in your main hand with a gapple for quick use
-
-## Swapping
-- Uses regular inventory swap actions for stability
 
 ## Misc
 - Adjustable delay
