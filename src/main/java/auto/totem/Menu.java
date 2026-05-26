@@ -22,7 +22,6 @@ public class Menu implements ModMenuApi {
 
             ConfigEntryBuilder entryBuilder = builder.entryBuilder();
 
-            // General
             ConfigCategory general = builder.getOrCreateCategory(Component.literal("General"));
 
             general.addEntry(entryBuilder
@@ -50,14 +49,21 @@ public class Menu implements ModMenuApi {
             );
 
             general.addEntry(entryBuilder
+                    .startEnumSelector(Component.literal("AC Mode"), ACMode.class, TotemConfig.acMode)
+                    .setDefaultValue(ACMode.NONE)
+                    .setTooltip(Component.literal("None: fastest swaps, for vanilla/anarchy\nNCP: moderate randomized delay\nGrim: stricter randomized delay"))
+                    .setSaveConsumer(val -> TotemConfig.acMode = val)
+                    .build()
+            );
+
+            general.addEntry(entryBuilder
                     .startIntSlider(Component.literal("Swap Delay (ms)"), TotemConfig.swapDelay, 0, 500)
                     .setDefaultValue(15)
-                    .setTooltip(Component.literal("Delay between swaps in milliseconds (internally clamped to a safe minimum)"))
+                    .setTooltip(Component.literal("Base delay between swaps. AC Mode sets a minimum floor above this and adds jitter."))
                     .setSaveConsumer(val -> TotemConfig.swapDelay = val)
                     .build()
             );
 
-            // Utils
             ConfigCategory utils = builder.getOrCreateCategory(Component.literal("Utils"));
 
             utils.addEntry(entryBuilder
@@ -100,7 +106,6 @@ public class Menu implements ModMenuApi {
                     .build()
             );
 
-            // Misc
             ConfigCategory misc = builder.getOrCreateCategory(Component.literal("Misc"));
 
             misc.addEntry(entryBuilder
@@ -138,8 +143,8 @@ public class Menu implements ModMenuApi {
         }
     }
 
-    public enum SwapMode {
-        REGULAR, PACKET;
+    public enum GappleBindTrigger {
+        SWORD, TOTEM, CRYSTAL, PICKAXE, AXE;
 
         @Override
         public String toString() {
@@ -147,17 +152,16 @@ public class Menu implements ModMenuApi {
         }
     }
 
-    public enum GappleBindTrigger {
-        SWORD, TOTEM, CRYSTAL, PICKAXE, AXE;
-        @Override public String toString() {
-            return name().charAt(0) + name().substring(1).toLowerCase();
-        }
-    }
-
     public enum ACMode {
-        NONE, GRIM, NCP;
-        @Override public String toString() {
-            return name().charAt(0) + name().substring(1).toLowerCase();
+        NONE, NCP, GRIM;
+
+        @Override
+        public String toString() {
+            return switch (this) {
+                case NONE -> "None";
+                case NCP  -> "NCP";
+                case GRIM -> "Grim";
+            };
         }
     }
 }

@@ -8,7 +8,7 @@ public class NoTotemParticles {
         return ParticlesToggled;
     }
 
-    public void toggle() {
+    public static void toggle() {
         ParticlesToggled = !ParticlesToggled;
     }
 }

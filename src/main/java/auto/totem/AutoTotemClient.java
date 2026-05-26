@@ -12,6 +12,8 @@ import org.lwjgl.glfw.GLFW;
 public class AutoTotemClient implements ClientModInitializer {
 
     private static KeyMapping toggleModKey;
+    private static boolean updateChecked = false;
+    private static int tickCounter = 0;
 
     @Override
     public void onInitializeClient() {
@@ -32,6 +34,14 @@ public class AutoTotemClient implements ClientModInitializer {
                     client.player.sendSystemMessage(
                             Component.literal("Auto Totem " + (TotemConfig.enabled ? "enabled" : "disabled"))
                     );
+                }
+            }
+
+            if (!updateChecked && client.player != null) {
+                tickCounter++;
+                if (tickCounter >= 100) {
+                    updateChecked = true;
+                    UpdateChecker.checkAsync();
                 }
             }
         });

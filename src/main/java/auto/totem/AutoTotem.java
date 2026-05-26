@@ -16,15 +16,30 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.inventory.ContainerInput;
 
+import java.util.Random;
+
 public class AutoTotem {
 
     private static final Minecraft mc = Minecraft.getInstance();
+    private static final Random RANDOM = new Random();
+
     private static long lastSwapTime = 0;
-    private static final int MIN_SAFE_SWAP_DELAY_MS = 40;
+    private static long currentSwapDelay = 0;
+
     private static boolean gappleActive = false;
     private static int savedOffhandSlot = -1;
     private static int savedMainhandSlot = -1;
+
     private static final int OFFHAND_BUTTON = 40;
+
+    private static final int NONE_MIN  = 40;
+    private static final int NONE_JITTER = 10;
+
+    private static final int NCP_MIN   = 80;
+    private static final int NCP_JITTER = 40;
+
+    private static final int GRIM_MIN  = 130;
+    private static final int GRIM_JITTER = 70;
 
     public static void init() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -37,12 +52,10 @@ public class AutoTotem {
     private static void tick(LocalPlayer player) {
         if (!TotemConfig.enabled) return;
         handleGappleBind(player);
-        if (isGappleUseActive(player)) return;
         handleTotemReplace(player);
         handleDamagePredict(player);
     }
 
-    // ================= TOTEM REPLACE =================
 
     private static void handleTotemReplace(LocalPlayer player) {
         if (!canSwap()) return;
@@ -50,12 +63,11 @@ public class AutoTotem {
         ItemStack mainhand = player.getMainHandItem();
         ItemStack offhand = player.getOffhandItem();
 
-        // All modes: replace totem in mainhand
         if (mainhand.is(Items.TOTEM_OF_UNDYING)) {
             int slot = findTotemInInventory(player, true);
             if (slot != -1) {
                 swapSlots(player, slot, player.getInventory().getSelectedSlot());
-                lastSwapTime = System.currentTimeMillis();
+                markSwapped();
                 return;
             }
         }
@@ -69,14 +81,15 @@ public class AutoTotem {
             handleLegitMode(player, totemSlot);
         } else {
             swapToOffhand(player, totemSlot);
-            lastSwapTime = System.currentTimeMillis();
+            markSwapped();
         }
     }
 
     private static void handleLegitMode(LocalPlayer player, int totemSlot) {
         if (!player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) {
             swapToOffhand(player, totemSlot);
-            lastSwapTime = System.currentTimeMillis();
+            markSwapped();
+            return;
         }
 
         boolean shouldRefill = player.getHealth() <= TotemConfig.legitHealthThreshold;
@@ -85,12 +98,11 @@ public class AutoTotem {
             int inv = findTotemInInventory(player, false);
             if (inv != -1) {
                 swapSlots(player, inv, findBestHotbarSlot(player));
-                lastSwapTime = System.currentTimeMillis();
+                markSwapped();
             }
         }
     }
 
-    // ================= GAPPLE BIND =================
 
     private static void handleGappleBind(LocalPlayer player) {
         if (!TotemConfig.gappleBind && !TotemConfig.gappleBindMain) return;
@@ -104,22 +116,21 @@ public class AutoTotem {
             if (TotemConfig.gappleBind && isGappleBindTrigger(mainhand) && !gappleActive) {
                 int gappleSlot = findGappleInInventory(player);
                 if (gappleSlot != -1) {
-                    // After swap, the previous offhand item will be in the gapple's old slot.
-                    savedOffhandSlot = gappleSlot;
+                    ItemStack currentOffhand = player.getOffhandItem();
+                    savedOffhandSlot = currentOffhand.isEmpty() ? -1 : gappleSlot;
                     swapToOffhand(player, gappleSlot);
                     gappleActive = true;
-                    lastSwapTime = System.currentTimeMillis();
+                    markSwapped();
                 }
             }
 
             if (TotemConfig.gappleBindMain && mainhand.is(Items.TOTEM_OF_UNDYING) && !gappleActive) {
                 int gappleSlot = findGappleInInventory(player);
                 if (gappleSlot != -1) {
-                    // Remember where the displaced mainhand item ends up.
                     savedMainhandSlot = gappleSlot;
                     swapSlots(player, gappleSlot, player.getInventory().getSelectedSlot());
                     gappleActive = true;
-                    lastSwapTime = System.currentTimeMillis();
+                    markSwapped();
                 }
             }
         }
@@ -134,21 +145,20 @@ public class AutoTotem {
                 savedMainhandSlot = -1;
             }
             gappleActive = false;
-            lastSwapTime = System.currentTimeMillis();
+            markSwapped();
         }
     }
 
     private static boolean isGappleBindTrigger(ItemStack stack) {
         return switch (TotemConfig.gappleBindTrigger) {
-            case SWORD -> stack.is(ItemTags.SWORDS);
-            case TOTEM -> stack.is(Items.TOTEM_OF_UNDYING);
+            case SWORD   -> stack.is(ItemTags.SWORDS);
+            case TOTEM   -> stack.is(Items.TOTEM_OF_UNDYING);
             case CRYSTAL -> stack.is(Items.END_CRYSTAL);
             case PICKAXE -> stack.is(ItemTags.PICKAXES);
-            case AXE -> stack.is(ItemTags.AXES);
+            case AXE     -> stack.is(ItemTags.AXES);
         };
     }
 
-    // ================= DAMAGE PREDICT =================
 
     private static void handleDamagePredict(LocalPlayer player) {
         if (!TotemConfig.damagePredict) return;
@@ -159,7 +169,7 @@ public class AutoTotem {
             int slot = findTotemInInventory(player, false);
             if (slot != -1) {
                 swapToOffhand(player, slot);
-                lastSwapTime = System.currentTimeMillis();
+                markSwapped();
             }
         }
     }
@@ -205,14 +215,8 @@ public class AutoTotem {
         return total;
     }
 
-    // ================= SWAP METHODS =================
 
     private static void swapToOffhand(LocalPlayer player, int inventorySlot) {
-        regularSwapToOffhand(player, inventorySlot);
-    }
-
-    // Regular mode: directly manipulate inventory items client-side
-    private static void regularSwapToOffhand(LocalPlayer player, int inventorySlot) {
         sendSwapPacket(player, inventorySlot, OFFHAND_BUTTON);
     }
 
@@ -238,22 +242,30 @@ public class AutoTotem {
         return (inventoryIndex >= 0 && inventoryIndex <= 8) ? 36 + inventoryIndex : inventoryIndex;
     }
 
-    // ================= UTILITY =================
 
     private static boolean canSwap() {
-        int minDelay = Math.max(TotemConfig.swapDelay, MIN_SAFE_SWAP_DELAY_MS);
-        return System.currentTimeMillis() - lastSwapTime >= minDelay;
+        return System.currentTimeMillis() - lastSwapTime >= currentSwapDelay;
     }
 
-    private static boolean isGappleUseActive(LocalPlayer player) {
-        if (!gappleActive) return false;
-        if (!mc.options.keyUse.isDown()) return false;
-        return !isInDanger(player);
+    private static void markSwapped() {
+        lastSwapTime = System.currentTimeMillis();
+        currentSwapDelay = nextDelay();
     }
+
+    private static long nextDelay() {
+        int base = TotemConfig.swapDelay;
+        return switch (TotemConfig.acMode) {
+            case NONE -> Math.max(base, NONE_MIN) + RANDOM.nextInt(NONE_JITTER + 1);
+            case NCP  -> Math.max(base, NCP_MIN)  + RANDOM.nextInt(NCP_JITTER + 1);
+            case GRIM -> Math.max(base, GRIM_MIN) + RANDOM.nextInt(GRIM_JITTER + 1);
+        };
+    }
+
 
     private static int findTotemInInventory(LocalPlayer player, boolean skipMainhand) {
         int mainhandSlot = player.getInventory().getSelectedSlot();
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            if (i == 40) continue;
             if (skipMainhand && i == mainhandSlot) continue;
             if (player.getInventory().getItem(i).is(Items.TOTEM_OF_UNDYING)) return i;
         }
@@ -281,7 +293,21 @@ public class AutoTotem {
         for (int i = 0; i < 9; i++) {
             if (player.getInventory().getItem(i).isEmpty()) return i;
         }
-        return 8;
+        int selected = player.getInventory().getSelectedSlot();
+        for (int i = 0; i < 9; i++) {
+            if (i == selected) continue;
+            ItemStack stack = player.getInventory().getItem(i);
+            if (stack.is(ItemTags.SWORDS)) continue;
+            if (stack.is(ItemTags.AXES)) continue;
+            if (stack.is(ItemTags.PICKAXES)) continue;
+            if (stack.is(Items.BOW) || stack.is(Items.CROSSBOW)) continue;
+            if (stack.is(Items.TOTEM_OF_UNDYING)) continue;
+            return i;
+        }
+        for (int i = 0; i < 9; i++) {
+            if (i != selected) return i;
+        }
+        return 0;
     }
 
 }

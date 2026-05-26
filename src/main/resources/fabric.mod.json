@@ -15,9 +15,6 @@
 	"icon": "assets/auto-totem/icon.png",
 	"environment": "client",
 	"entrypoints": {
-		"main": [
-          "auto.totem.AutoTotemMain"
-		],
 		"client": [
 			"auto.totem.AutoTotemClient"
 		],
