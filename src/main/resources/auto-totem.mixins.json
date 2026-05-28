@@ -6,10 +6,6 @@
 		"TotemParticlesMixin",
 		"TotemAnimationMixin"
 	],
-	"client": [
-		"TotemParticlesMixin",
-		"TotemAnimationMixin"
-	],
 	"injectors": {
 		"defaultRequire": 1
 	},
